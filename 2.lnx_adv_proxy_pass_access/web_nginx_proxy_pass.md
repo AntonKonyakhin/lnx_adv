@@ -13,7 +13,7 @@ rm /etc/nginx/modules-enabled/50-mod-mail.conf
 ```
 - В отдельном конфигурационном файле должен быть описан server, который слушает на 80 порту и использует домен, полученный при помощи сервиса http://nip.io/. Например, Ваш публичный адрес 100.101.102.103, тогда один из вариантов имени будет app.100.101.102.103.nip.io. Если этот сервис недоступен, то можно воспользоваться любым аналогичным.
 
-- Разрешены обращения со всех хостов, кроме 10.10.10.10.
+- Разрешены обращения со всех хостов, кроме 10.10.10.10
 
 ```
 создать файл в папке /etc/nginx/sites-available
@@ -32,15 +32,23 @@ htpasswd -c /etc/nginx/htpasswd $USERNAME данная команда созда
 
 конфиг
 ```
+upstream backend {
+  server example.com:443;
+}
+deny 10.10.10.10
+
+#resolver 8.8.8.8 ipv6=off;
+
+log_format logz '$remote_addr - [$time_local] - "$request" - $status';
+
 server {
   listen 80;
-  server_name 127.0.0.1;
-
+  server_name app.nip.io;
   index index.nginx-debian.html;
 
   access_log /var/log/nginx/nip.access.log logz;
 
-  auth_basic           "Administrator’s Area";
+  auth_basic "Administrator's area";
   auth_basic_user_file /etc/nginx/.htpasswd;
 
   root /var/www/html/;
@@ -55,15 +63,20 @@ server {
 
   location /rbm_images {
     alias /var/www/rebrain/images/;
-
   }
+
   location =/rbm_images/logo.png {
     alias /var/www/rebrain/images/logo_rebrain_black.png;
   }
 
-
+  location /example/ {
+    resolver 1.1.1.1 ipv6=off;
+    proxy_pass https://backend;
+    proxy_set_header Host example.com;
+  }
 
 }
+
                                                                                                 
 ```
 
@@ -89,45 +102,25 @@ access_log /var/log/nginx/nip.access.log logz;
 
 Запрос на /example/ должен проксироваться на https://example.com/, обращение к которому производится через upstream.
 
+```
 http {
 
-       upstream backend.example.com {
+       upstream backend {
          server example.com:443;
        }
 }
+```
 
+```
 
-  location /example/ {
-    proxy_pass https://backend.example.com;
+location /example/ {
+    resolver 1.1.1.1 ipv6=off;
+    proxy_pass https://backend;
+    proxy_set_header Host example.com;
   }
 
-
-
-
-
-4. В ответе пришлите:
-- конфигурационный файл для основного сервера и путь до него;
-
-```
-/etc/nginx/sites-available
+  
 ```
 
-- список файлов в /etc/nginx/modules-enabled/.
-```
-root@ubuntu-lvm:/etc/nginx/sites-available# ls -la /etc/nginx/modules-enabled/
-total 24
-drwxr-xr-x 2 root root 4096 янв  1 20:14 .
-drwxr-xr-x 8 root root 4096 янв  1 22:30 ..
-lrwxrwxrwx 1 root root   57 янв  1 19:48 50-mod-http-auth-pam.conf -> /usr/share/nginx/modules-available/mod-http-auth-pam.conf
-lrwxrwxrwx 1 root root   56 янв  1 19:48 50-mod-http-dav-ext.conf -> /usr/share/nginx/modules-available/mod-http-dav-ext.conf
-lrwxrwxrwx 1 root root   53 янв  1 19:48 50-mod-http-echo.conf -> /usr/share/nginx/modules-available/mod-http-echo.conf
-lrwxrwxrwx 1 root root   55 янв  1 19:48 50-mod-http-geoip2.conf -> /usr/share/nginx/modules-available/mod-http-geoip2.conf
-lrwxrwxrwx 1 root root   54 янв  1 19:48 50-mod-http-geoip.conf -> /usr/share/nginx/modules-available/mod-http-geoip.conf
-lrwxrwxrwx 1 root root   61 янв  1 19:48 50-mod-http-image-filter.conf -> /usr/share/nginx/modules-available/mod-http-image-filter.conf
-lrwxrwxrwx 1 root root   60 янв  1 19:48 50-mod-http-subs-filter.conf -> /usr/share/nginx/modules-available/mod-http-subs-filter.conf
-lrwxrwxrwx 1 root root   62 янв  1 19:48 50-mod-http-upstream-fair.conf -> /usr/share/nginx/modules-available/mod-http-upstream-fair.conf
-lrwxrwxrwx 1 root root   60 янв  1 19:48 50-mod-http-xslt-filter.conf -> /usr/share/nginx/modules-available/mod-http-xslt-filter.conf
-lrwxrwxrwx 1 root root   50 янв  1 19:48 50-mod-stream.conf -> /usr/share/nginx/modules-available/mod-stream.conf
 
-```
 
